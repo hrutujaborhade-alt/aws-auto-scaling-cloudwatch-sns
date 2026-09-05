@@ -99,7 +99,7 @@ This setup demonstrates **automatic scaling, load distribution, instance health 
 | **Target Group**              | Registers EC2 instances and performs health checks                           |
 | **Auto Scaling Group**        | Automatically manages EC2 instance capacity                                  |
 | **Target Tracking Policy**    | Adjusts capacity based on the configured CPU utilization target              |
-| **Amazon CloudWatch**         | Monitors CPU utilization and manages alarms                                  |
+| **CloudWatch Monitoring**     | Monitors CPU utilization and manages alarms                                  |
 | **Amazon SNS**                | Sends email notifications                                                    |
 | **IAM**                       | Provides required permissions                                                |
 
@@ -240,21 +240,25 @@ Application Load Balancer
 
 # 🔹 7. Auto Scaling Group
 
-An **Auto Scaling Group (ASG)** was configured using the Launch Template.
+An **Auto Scaling Group (ASG)** was configured using the Launch Template created from the AMI.
 
 The Auto Scaling Group manages the number of EC2 instances according to the configured minimum, desired, and maximum capacity.
 
-The ASG is also associated with the Target Group so that newly launched instances can become part of the load-balanced application environment.
+A **Target Tracking Scaling Policy** was directly configured within the Auto Scaling Group using **Average CPU Utilization** as the scaling metric.
+
+When the average CPU utilization increases above the configured target, the Auto Scaling Group automatically launches additional EC2 instances. When demand decreases, the ASG can scale in based on the configured policy.
 
 ### Configuration
 
-* Minimum Capacity: `<min>`
-* Desired Capacity: `<desired>`
-* Maximum Capacity: `<max>`
-* Launch Template configured
-* AMI configured through Launch Template
-* Target Group attached
-* Target Tracking Scaling Policy configured
+- Minimum Capacity: `<min>`
+- Desired Capacity: `<desired>`
+- Maximum Capacity: `<max>`
+- Launch Template configured
+- AMI configured through Launch Template
+- Target Group attached
+- Target Tracking Scaling Policy configured
+- Metric: Average CPU Utilization
+- Target Value: `<target>%`
 
 ### Auto Scaling Group
 
@@ -297,83 +301,36 @@ Launch New EC2 Instance
 
 # 🔹 9. CloudWatch Monitoring
 
-**Amazon CloudWatch** was configured to monitor EC2 CPU utilization.
+Amazon CloudWatch metrics are used by the **Target Tracking Scaling Policy** to monitor the average CPU utilization of the EC2 instances in the Auto Scaling Group.
 
-CloudWatch collects the required metrics and evaluates the configured alarm/scaling conditions.
+The scaling policy continuously evaluates CPU utilization against the configured target value and automatically adjusts the number of EC2 instances when required.
 
-A CloudWatch alarm was also configured for the required notification scenario.
-
-### Monitoring Flow
+### Scaling Flow
 
 ```text
-EC2 Instance
+EC2 Instances
       |
       v
-CPU Utilization
+Average CPU Utilization
       |
       v
-CloudWatch
+Target Tracking Scaling Policy
       |
-      +----------------------+
-      |                      |
-      v                      v
-Scaling Policy          CloudWatch Alarm
-      |                      |
-      v                      v
-Auto Scaling                SNS
-```
-
-### CloudWatch Alarm
-
-![CloudWatch Alarm](images/cloudwatch-alarm.png)
-
----
-
-# 🔹 10. Auto Scaling Test
-
-To test the Auto Scaling configuration, CPU load was generated on the EC2 instance.
-
-The increased CPU utilization was detected by CloudWatch.
-
-The Target Tracking Scaling Policy then evaluated the CPU utilization against the configured target and the Auto Scaling Group launched an additional EC2 instance when required.
-
-### Scaling Test Flow
-
-```text
-CPU Load Generated
-        |
-        v
-CPU Utilization Increases
-        |
-        v
-CloudWatch Monitors Metric
-        |
-        v
-Target Tracking Policy
-        |
-        v
+      v
 Auto Scaling Group
-        |
-        v
-Scale Out
-        |
-        v
-New EC2 Instance Launched
-        |
-        v
-Instance Registered with Target Group
-        |
-        v
-ALB Distributes Traffic
+      |
+   +--+--+
+   |     |
+   v     v
+Scale Out  Scale In
 ```
+---
 
-### Scaling Activity
 
-![Auto Scaling Activity](images/scaling-activity.png)
 
 ---
 
-# 🔹 11. New Instance Registration
+# 🔹 10. New Instance Registration
 
 When the Auto Scaling Group launches a new EC2 instance, the instance is automatically registered with the associated Target Group.
 
@@ -408,7 +365,7 @@ ALB Routes Traffic
 
 ---
 
-# 🔹 12. SNS Email Notification
+# 🔹 11. SNS Email Notification
 
 **Amazon SNS** was configured to send email notifications based on the configured CloudWatch alarm.
 
@@ -438,7 +395,7 @@ Email Notification
 
 ---
 
-# 🔹 13. Load Distribution
+# 🔹 12. Load Distribution
 
 After additional EC2 instances are launched by the Auto Scaling Group and pass the Target Group health checks, the Application Load Balancer distributes incoming traffic across the available healthy instances.
 
